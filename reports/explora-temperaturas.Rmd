@@ -1,9 +1,10 @@
 ---
 title: "Temperatura JP x CG"
-output:
-    html_document:
-    df_print: paged
 theme: sandstone
+output:
+  html_document: null
+  word_document: default
+  df_print: paged
 ---
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -11,38 +12,373 @@ library(tidyverse)
 library(here)
 library(lubridate)
 library(ggbeeswarm)
+library(gridExtra)
 theme_set(theme_bw())
 ```
 
 ```{r read}
-climas = read_csv(here::here("data/clima_cg_jp-semanal.csv"), 
+climas_total = read_csv(here::here("data/clima_cg_jp-semanal.csv"), 
                   col_types = "cTdddddd")
 
-glimpse(climas)
+
+
+
+glimpse(climas_total)
 ```
 
-## Temperatura
-
-### Onde é mais quente?
-
-
-### As temperaturas máximas semanais (o pico do calor) são tão diferentes quanto as médias? Mais?  
-
-
-### Quais os meses mais quentes e mais frios? 
-
-
-### Qual foi o São João  mais frio de CG que está nos nossos dados?
+##*Temperatura*
 
 
 
-## Chuva
+#### *Onde é mais quente*?
 
-### Quanto chove por semana em JP e CG?
+Tem-se por fato estabelecido que João Pessoa (JP) é uma cidade mais quente do que Campina Grande (CG), essa concepção é embasada devido a sua própria localização. Enquanto João Pessoa é uma cidade litorânea com altitude média de 37m, Campina Grande está cituada no Planalto da Borborema com altitude média de 551m. Esse pensamento também é fortalecido a partir da maneira como os sentidos percebem a temperatura do ar. 
 
-Como é a distribuição do volume de chuvas por semana em JP e CG? A chuva varia mais ou menos que a temperatura? O formato da distribuição é igual? 
+A sensação térmica é influenciada, dentre outros fatores, pela umidade e velocidade do vento, logo, não necessariamente a sensação obtida pelos moradores das regiões supracitadas pode representar de fato a temperatura dos locais. Portanto, foram analisados dados de temperatura coletados do INMET (Instituto Nacional de Meteorologia), com o intuito de confirmar ou refutar a concepção de que João Pessoa é uma cidade mais quente do que Campina Grande.
 
-### No geral, onde chove mais?
 
-### A distribuição é diferente em meses específicos? 
+Primeiro, faz-se necessário analisar a distribuição dos dados coletados. De início, é possível observar que o número de observações para cidade de João Pessoa, foi superior ao de Campina Grande. Isso ocorre, principalmente, devido aos dados para cidade de João Pessoa terem sido coletados desde dezembro de 1987, enquanto para Campina Grande a partir de dezembro de 1992. Essa diferença entre as datas pode acarretar em uma ameaça interna de seleção, vide que não possuem intervalos iguais. Logo, com o intuito de mitigar essa possível ameaça, optou-se por selecionar os dados contidos no mesmo intervalo de tempo, considerando então, os anos de 1995 a 2018.
+
+
+
+
+```{r}
+
+climas_total %>%
+   # distinct(session_id, .keep_all=TRUE) %>%
+ggplot() + 
+  geom_bar(mapping = aes(x = cidade), stat = "count", fill = "#4169E1")  + labs(y="Número de Observações", x="")
+```
+
+
+
+```{r}
+climas = filter(climas_total,  ano >= "1995" & ano <= "2018")
+
+```
+
+
+
+As variáveis coletadas dizem respeito às temperaturas máximas, médias e mínimas por semana. Com relação à temperatura máxima, observamos por diferentes tipos de visualização e pelo desvio padrão, que os dados referentes a Campina Grande são bem mais dispersos que os de João Pessoa. As médias e medianas de CG e JP são quase idênticas. No entanto, devido aos dados de CG estarem mais dispersos não se tem informações suficientes para responder ao questionamento abordado considerando somente os valores da temperatura máxima.
+
+```{r}
+
+
+dispersion = climas %>% 
+  ggplot(mapping = aes(x = cidade, y = tmax)) + 
+  geom_point(position = position_jitter(width = .1), alpha = .04) + labs(x="", y="")
+
+cg = climas %>% 
+    filter(cidade == "Campina Grande") 
+
+jp = climas %>% 
+    filter(cidade == "João Pessoa") 
+
+hist_temperatura_jp = jp %>%
+    ggplot(aes(x = tmax)) + 
+    geom_histogram(bins = 20, fill = "white", color = "blue") + labs(x="João Pessoa", y="")
+
+
+hist_temperatura_cg = cg %>%
+    ggplot(aes(x = tmax)) + 
+    geom_histogram(bins = 20, fill = "white", color = "blue") + labs(x="Campina Grande", y="")
+
+
+dens_temperatura_cg = cg %>% 
+    ggplot(aes(x = tmax)) + 
+    geom_density(fill = "#F7B2AD") + labs(x="Campina Grande", y="")
+
+dens_temperatura_jp = jp %>% 
+    ggplot(aes(x = tmax)) + 
+    geom_density(fill = "#F7B2AD")  + labs(x="João Pessoa", y="")
+
+
+box_temperatura_cg_jp = climas %>% 
+    ggplot(box_temperatura_cg_jp, mapping = aes(x = cidade, y = tmax))  + geom_boxplot(coef = 1000, width = .2) + labs(y="", x="")
+
+
+
+
+grid.arrange(hist_temperatura_cg, hist_temperatura_jp, dens_temperatura_cg, dens_temperatura_jp, dispersion, box_temperatura_cg_jp, top="Temperatura Máxima")
+
+climas %>% 
+  group_by(Cidade=cidade) %>% 
+ summarise( Media = mean(tmax),
+ Mediana = median(tmax),
+ Desvio = sd(tmax)) 
+
+```
+
+
+Analisando, então, a temperatura mínima, observa-se que há uma dispersão e valores discrepantes. A dispersão apresentada, ainda assim, não impede a visualização de uma diferença significativa entra as temperaturas das cidades. Isso pode ser visto por meio do boxplot e confirmado pelos valores para média, mediana e desvio padrão, exibidos na tabela abaixo. Também é possível observar nos histogramas que para JP os valores mais frequentes foram entre 20º e 25ºC, enquanto que para CG observou-se maiores ocorrências entre 17º e 21ºC.  Nesse sentido, evidencia-se que Campina Grande apresenta no geral menores valores de temperatura do que João Pessoa.
+
+
+```{r}
+
+
+dispersion = climas %>% 
+  ggplot(mapping = aes(x = cidade, y = tmin)) + 
+  geom_point(position = position_jitter(width = .1), alpha = .04) + labs(x="", y="")
+
+cg = climas %>% 
+    filter(cidade == "Campina Grande") 
+
+jp = climas %>% 
+    filter(cidade == "João Pessoa") 
+
+hist_temperatura_jp = jp %>%
+    ggplot(aes(x = tmin)) + 
+    geom_histogram(bins = 20, fill = "white", color = "blue") + labs(x="João Pessoa", y="")
+
+
+hist_temperatura_cg = cg %>%
+    ggplot(aes(x = tmin)) + 
+    geom_histogram(bins = 20, fill = "white", color = "blue") + labs(x="Campina Grande", y="")
+
+
+dens_temperatura_cg = cg %>% 
+    ggplot(aes(x = tmin)) + 
+    geom_density(fill = "#F7B2AD") + labs(x="Campina Grande", y="")
+
+dens_temperatura_jp = jp %>% 
+    ggplot(aes(x = tmin)) + 
+    geom_density(fill = "#F7B2AD")  + labs(x="João Pessoa", y="")
+
+
+box_temperatura_cg_jp = climas %>% 
+    ggplot(box_temperatura_cg_jp, mapping = aes(x = cidade, y = tmin))  + geom_boxplot(coef = 1000, width = .2) + labs(y="", x="")
+
+
+
+
+grid.arrange(hist_temperatura_cg, hist_temperatura_jp, dens_temperatura_cg, dens_temperatura_jp, dispersion, box_temperatura_cg_jp, top="Temperatura Mínima")
+
+climas %>% 
+  group_by(Cidade=cidade) %>% 
+ summarise( Media = mean(tmin),
+ Mediana = median(tmin),
+ Desvio = sd(tmin)) 
+
+
+```
+
+Analisando a temperatura média, observa-se novamente que os valores para CG são mais dispersos se comparados aos de JP. No entanto, é possível visualizar que mesmo considerando a variação dos dados, há uma diferença mais evidente entre as temperaruras das duas cidades. Isso pode ser observado tanto no boxplot, como nos desvios, médias e medianas apresentados abaixo. Verifica-se então, que a temperatura média de JP, no geral, apresenta-se superior a de CG. Portanto, os resultados indicam que JP é mais quente que CG.
+
+
+```{r}
+
+
+dispersion = climas %>% 
+  ggplot(mapping = aes(x = cidade, y = tmedia)) + 
+  geom_point(position = position_jitter(width = .1), alpha = .04) + labs(x="", y="")
+
+cg = climas %>% 
+    filter(cidade == "Campina Grande") 
+
+jp = climas %>% 
+    filter(cidade == "João Pessoa") 
+
+hist_temperatura_jp = jp %>%
+    ggplot(aes(x = tmedia)) + 
+    geom_histogram(bins = 20, fill = "white", color = "blue") + labs(x="João Pessoa", y="")
+
+
+hist_temperatura_cg = cg %>%
+    ggplot(aes(x = tmedia)) + 
+    geom_histogram(bins = 20, fill = "white", color = "blue") + labs(x="Campina Grande", y="")
+
+
+dens_temperatura_cg = cg %>% 
+    ggplot(aes(x = tmedia)) + 
+    geom_density(fill = "#F7B2AD") + labs(x="Campina Grande", y="")
+
+dens_temperatura_jp = jp %>% 
+    ggplot(aes(x = tmedia)) + 
+    geom_density(fill = "#F7B2AD")  + labs(x="João Pessoa", y="")
+
+
+box_temperatura_cg_jp = climas %>% 
+    ggplot(box_temperatura_cg_jp, mapping = aes(x = cidade, y = tmedia))  + geom_boxplot(coef = 1000, width = .2) + labs(y="", x="")
+
+
+
+
+grid.arrange(hist_temperatura_cg, hist_temperatura_jp, dens_temperatura_cg, dens_temperatura_jp, dispersion, box_temperatura_cg_jp, top="Temperatura Média")
+
+
+climas %>% 
+  group_by(Cidade=cidade) %>% 
+ summarise( Media = mean(tmedia),
+ Mediana = median(tmedia),
+ IQR = IQR(tmedia),
+ Desvio = sd(tmedia)) 
+
+```
+
+
+
+
+
+####*Qual foi o São João  mais frio de CG que está nos nossos dados?*
+
+```{r}
+
+climas_sj = filter(climas, mes == 6 & cidade == "Campina Grande")
+
+```
+
+
+O São João é caracterizado por ser uma época mais fria em Campina Grande. Nesse sentido, surge o questionamento sobre qual ano foi mais frio neste período. Buscando responder essa pergunta, foram analisadas as temperaturas médias e mínimas em CG dos meses de Junho de 1995 a 2018, com exceção de 2000 e 2001, pois não foram obtidos dados para esses anos.
+
+
+Analisando o boxplot sobre as temperaturas médias, é possível observar que os menores valores ocorreram entre 2002 e 2008. Para o ano de 2004, há uma menor variação entre os dados. Para esse caso, é possível observar que existe um valor no limite superior, mas as demais observações se concentram próximos a mediana e no primeiro quartil. Portanto, há uma maior evidência de que o ano de 2004 foi o que apresentou, no geral, o São João mais frio dentre os anos considerados. 
+
+
+
+```{r}
+
+
+box_temperatura_sj= climas_sj %>% 
+    ggplot(box_temperatura_sj, mapping = aes(x = ano, y = tmedia, group = ano))  + geom_boxplot(coef = 1000, width = .2) +   geom_jitter(
+        width = .05,
+        alpha = .4,
+        size = 1,
+        color = "orange"
+    ) + labs(y="Temperatura Média", x="Ano")
+
+grid.arrange(box_temperatura_sj)
+
+
+```
+
+Avaliando as temperaturas mínimas, já não é tão evidente qual ano obteve o São João mais frio. Entretanto, é possível visualizar que o menor valor de temperatura observado, foi no ano de 2003 (16.1º C). Analisando por esta perspectiva, indica-se que o são joão com o registro mais baixo de temperatura foi o do ano de 2003.
+
+```{r}
+
+
+box_temperatura_sj= climas_sj %>% 
+    ggplot(box_temperatura_sj, mapping = aes(x = ano, y = tmin, group = ano))  + geom_boxplot(coef = 1000, width = .2) +   geom_jitter(
+        width = .05,
+        alpha = .4,
+        size = 1,
+        color = "orange"
+    ) + labs(y="Temperatura Mínima", x="Ano")
+
+grid.arrange(box_temperatura_sj)
+
+```
+
+
+
+
+
+## *Chuva*
+
+
+
+
+#### *No geral, onde chove mais?*
+
+
+Devido a sua localização litorânea, podemos levantar a hipótese de que JP tende a ter uma maior quantidade de chuva do que CG ao longo dos anos. Para validar ou refutar esta hipótese, foram analisados os índices pluviométricos de ambas as cidades.
+
+
+Analisando o Boxplot e os valores da média e mediana, observa-se que há maiores indícios de que em JP chove mais do que em CG, entretanto, nota-se um alto desvio padrão. Além disso, por meio do gráfico de densidade, é possível observar que a distribuição é assimétrica positiva (positive skew) tanto para CG como para JP. Desse modo, devido a essa distribuição, não se teria poder estatístico suficiente se os dados fossem analisados apenas a partir das medidas de centralidade. Isso poderia implicar em uma possível ameaça a validade de conclusão.
+
+
+Observa-se que a cauda da distribuição (vide histograma e gráfico de densidade), para ambos os casos, é longa, isso indica a presença de valores discrepantes. No entanto, a cauda da distribuição se estende até valores superiores a 300 mm em JP, enquanto para CG, estende-se até 200mm. Também é possível notar que há maior frequência de valores entre 0 e 50 mm para CG e entre 0 e 100mm para JP. Há, portanto, mais uma evidência de que se chove mais na capital paraíbana do que em Campina Grande.
+
+```{r}
+
+
+dispersion = climas %>% 
+  ggplot(mapping = aes(x = cidade, y = chuva)) + 
+  geom_point(position = position_jitter(width = .1), alpha = .04) + labs(x="", y="")
+
+cg = climas %>% 
+    filter(cidade == "Campina Grande") 
+
+jp = climas %>% 
+    filter(cidade == "João Pessoa") 
+
+hist_temperatura_jp = jp %>%
+    ggplot(aes(x = chuva)) + 
+    geom_histogram(bins = 20, fill = "white", color = "blue") + labs(x="João Pessoa", y="")
+
+
+hist_temperatura_cg = cg %>%
+    ggplot(aes(x = chuva)) + 
+    geom_histogram(bins = 20, fill = "white", color = "blue") + labs(x="Campina Grande", y="")
+
+
+dens_temperatura_cg = cg %>% 
+    ggplot(aes(x = chuva)) + 
+    geom_density(fill = "#F7B2AD") + labs(x="Campina Grande", y="")
+
+dens_temperatura_jp = jp %>% 
+    ggplot(aes(x = chuva)) + 
+    geom_density(fill = "#F7B2AD")  + labs(x="João Pessoa", y="")
+
+
+box_temperatura_cg_jp = climas %>% 
+    ggplot(box_temperatura_cg_jp, mapping = aes(x = cidade, y = chuva))  + geom_boxplot(coef = 1000, width = .2) + labs(y="", x="")
+
+
+
+
+grid.arrange(hist_temperatura_cg, hist_temperatura_jp, dens_temperatura_cg, dens_temperatura_jp, dispersion, box_temperatura_cg_jp, top="Índice Pluviométrico (mm)")
+
+
+climas %>% 
+  group_by(Cidade=cidade) %>% 
+ summarise( Media = mean(chuva),
+ Mediana = median(chuva),
+ Desvio = sd(chuva)) 
+
+```
+
+
+
+
+
+
+#### *A distribuição é diferente em meses específicos? *
+
+
+
+Outra análise interessante é observar a disposição dos dados com relação aos meses. Como pode ser observado nos gráficos abaixo, independente do mês, a distribuição apresenta uma assimetria positiva. É possível observar, também, que os meses de setembro a janeiro foram os que apresentaram maior número de ocorrências de 0mm. Isto é um índicio de que são os meses que apresentam um maior número de semanas em que não chove. A partir de fevereiro nota-se que a distribuição vai apresentando uma cauda maior, que é mais acentuada nos meses de junho e julho.
+
+
+
+```{r}
+
+climas %>%
+    ggplot(aes(x = chuva, fill=cidade)) + 
+    geom_histogram(bins = 20) + labs(x="Índice Pluviométrico (mm)", y="Frequência") + 
+    facet_wrap(~ mes, labeller = label_parsed )
+```
+
+
+No Boxplot abaixo, é possível observar que nos primeiros meses os índices pluviométricos são menores, vão aumentando a partir do mês de março e voltam a reduzir a partir de setembro. Se tornando mais evidente quais meses apresentam um maior volume de chuva ao longo do ano.
+
+```{r}
+
+cg_chuva = climas %>% 
+    filter(cidade == "Campina Grande") 
+
+jp_chuva = climas %>% 
+    filter(cidade == "João Pessoa") 
+
+
+box_chuva_cg= cg_chuva %>% 
+    ggplot(box_chuva_cg, mapping = aes(x = mes, y = chuva, group = mes))  + geom_boxplot(coef = 1000, width = .5) + labs(y="", x="Campina Grande")
+
+box_chuva_jp= jp_chuva %>% 
+    ggplot(box_chuva_jp, mapping = aes(x = mes, y = chuva, group = mes))  + geom_boxplot(coef = 1000, width = .5) + labs(y="", x="João Pessoa")
+
+grid.arrange(box_chuva_cg, box_chuva_jp, top="          Índice Pluviométrico (mm)")
+
+
+
+```
 
